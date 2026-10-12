@@ -51,3 +51,75 @@ def reset_database():
         DB_PATH.unlink()
 
     initialize_database()
+
+
+def create_document(owner_id: str, title: str, content: str):
+    connection = get_connection()
+
+    try:
+        cursor = connection.execute(
+            """
+            INSERT INTO documents (
+                owner_id,
+                title,
+                content
+            )
+            VALUES (?, ?, ?)
+            """,
+            (owner_id, title, content),
+        )
+
+        connection.commit()
+
+        document = connection.execute(
+            """
+            SELECT id, owner_id, title, content, created_at
+            FROM documents
+            WHERE id = ?
+            """,
+            (cursor.lastrowid,),
+        ).fetchone()
+
+        return dict(document)
+    finally:
+        connection.close()
+
+
+def list_documents_for_owner(owner_id: str):
+    connection = get_connection()
+
+    try:
+        documents = connection.execute(
+            """
+            SELECT id, owner_id, title, created_at
+            FROM documents
+            WHERE owner_id = ?
+            ORDER BY id
+            """,
+            (owner_id,),
+        ).fetchall()
+
+        return [dict(document) for document in documents]
+    finally:
+        connection.close()
+
+
+def get_document_by_id(document_id: int):
+    connection = get_connection()
+
+    try:
+        document = connection.execute(
+            """
+            SELECT id, owner_id, title, content, created_at
+            FROM documents
+            WHERE id = ?
+            """,
+            (document_id,),
+        ).fetchone()
+
+        if document is None:
+            return None
+
+        return dict(document)
+    finally:
+        connection.close()

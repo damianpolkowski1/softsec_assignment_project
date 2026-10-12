@@ -9,8 +9,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from application_api.users import USERS
 
 ALGORITHM = "HS256"
+
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+RESOURCE_TOKEN_EXPIRE_MINUTES = 5
+
 APPLICATION_AUDIENCE = "application-api"
+RESOURCE_AUDIENCE = "resource-service"
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -20,6 +24,15 @@ def get_jwt_secret():
 
     if not secret:
         raise RuntimeError("JWT_SECRET environment variable is not set")
+
+    return secret
+
+
+def get_resource_jwt_secret():
+    secret = os.environ.get("RESOURCE_JWT_SECRET")
+
+    if not secret:
+        raise RuntimeError("RESOURCE_JWT_SECRET environment variable is not set")
 
     return secret
 
@@ -45,6 +58,31 @@ def create_access_token(username: str, role: str):
     return jwt.encode(
         payload,
         get_jwt_secret(),
+        algorithm=ALGORITHM,
+    )
+
+
+def create_resource_token(
+    username: str,
+    action: str,
+    resource_id: int | None = None,
+):
+    now = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": username,
+        "aud": RESOURCE_AUDIENCE,
+        "action": action,
+        "iat": now,
+        "exp": now + timedelta(minutes=RESOURCE_TOKEN_EXPIRE_MINUTES),
+    }
+
+    if resource_id is not None:
+        payload["resource_id"] = resource_id
+
+    return jwt.encode(
+        payload,
+        get_resource_jwt_secret(),
         algorithm=ALGORITHM,
     )
 
