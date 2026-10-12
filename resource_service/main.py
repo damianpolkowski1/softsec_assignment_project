@@ -9,6 +9,7 @@ from resource_service.database import (
     get_document_by_id,
     initialize_database,
     list_documents_for_owner,
+    search_documents_for_owner,
 )
 
 
@@ -67,6 +68,19 @@ def list_documents(authority=Depends(get_authority)):
     require_action(authority, "list_documents")
 
     return list_documents_for_owner(authority["sub"])
+
+
+@app.get("/documents/search")
+def search_documents(
+    q: str,
+    authority=Depends(get_authority),
+):
+    require_action(authority, "search_documents")
+
+    return search_documents_for_owner(
+        owner_id=authority["sub"],
+        query=q,
+    )
 
 
 @app.get("/documents/{document_id}")

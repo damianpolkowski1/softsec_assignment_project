@@ -43,6 +43,7 @@ def request_resource_service(
     path: str,
     authority_token: str,
     json_body: dict | None = None,
+    params: dict | None = None,
 ):
     try:
         response = httpx.request(
@@ -52,6 +53,7 @@ def request_resource_service(
                 "Authorization": f"Bearer {authority_token}",
             },
             json=json_body,
+            params=params,
             timeout=5.0,
         )
     except httpx.RequestError as exc:
@@ -157,6 +159,24 @@ def list_documents(current_user=Depends(get_current_user)):
         method="GET",
         path="/documents",
         authority_token=authority_token,
+    )
+
+
+@app.get("/documents/search")
+def search_documents(
+    q: str,
+    current_user=Depends(get_current_user),
+):
+    authority_token = create_resource_token(
+        username=current_user["username"],
+        action="search_documents",
+    )
+
+    return request_resource_service(
+        method="GET",
+        path="/documents/search",
+        authority_token=authority_token,
+        params={"q": q},
     )
 
 

@@ -123,3 +123,23 @@ def get_document_by_id(document_id: int):
         return dict(document)
     finally:
         connection.close()
+
+
+# This search functionality is intentionally vulnerable to SQL injection
+def search_documents_for_owner(owner_id: str, query: str):
+    connection = get_connection()
+
+    try:
+        sql = f"""
+            SELECT id, owner_id, title, content, created_at
+            FROM documents
+            WHERE owner_id = '{owner_id}'
+              AND title LIKE '%{query}%'
+            ORDER BY id
+        """
+
+        documents = connection.execute(sql).fetchall()
+
+        return [dict(document) for document in documents]
+    finally:
+        connection.close()
