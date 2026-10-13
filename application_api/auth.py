@@ -12,9 +12,11 @@ ALGORITHM = "HS256"
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 RESOURCE_TOKEN_EXPIRE_MINUTES = 5
+PROCESSING_TOKEN_EXPIRE_MINUTES = 5
 
 APPLICATION_AUDIENCE = "application-api"
 RESOURCE_AUDIENCE = "resource-service"
+PROCESSING_AUDIENCE = "processing-service"
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -33,6 +35,15 @@ def get_resource_jwt_secret():
 
     if not secret:
         raise RuntimeError("RESOURCE_JWT_SECRET environment variable is not set")
+
+    return secret
+
+
+def get_processing_jwt_secret():
+    secret = os.environ.get("PROCESSING_JWT_SECRET")
+
+    if not secret:
+        raise RuntimeError("PROCESSING_JWT_SECRET environment variable is not set")
 
     return secret
 
@@ -83,6 +94,25 @@ def create_resource_token(
     return jwt.encode(
         payload,
         get_resource_jwt_secret(),
+        algorithm=ALGORITHM,
+    )
+
+
+def create_processing_token(document_id: int):
+    now = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": "application-api",
+        "aud": PROCESSING_AUDIENCE,
+        "action": "analyze_document",
+        "resource_id": document_id,
+        "iat": now,
+        "exp": now + timedelta(minutes=PROCESSING_TOKEN_EXPIRE_MINUTES),
+    }
+
+    return jwt.encode(
+        payload,
+        get_processing_jwt_secret(),
         algorithm=ALGORITHM,
     )
 

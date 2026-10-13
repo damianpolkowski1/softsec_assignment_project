@@ -8,6 +8,7 @@ from application_api.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     create_access_token,
     create_resource_token,
+    create_processing_token,
     get_current_user,
     verify_password,
 )
@@ -16,6 +17,11 @@ from application_api.users import USERS
 RESOURCE_SERVICE_URL = os.environ.get(
     "RESOURCE_SERVICE_URL",
     "http://127.0.0.1:8001",
+)
+
+PROCESSING_SERVICE_URL = os.environ.get(
+    "PROCESSING_SERVICE_URL",
+    "http://127.0.0.1:8002",
 )
 
 
@@ -64,6 +70,42 @@ def request_resource_service(
 
     if response.is_error:
         detail = "Resource Service request failed"
+
+        try:
+            detail = response.json().get("detail", detail)
+        except ValueError:
+            pass
+
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=detail,
+        )
+
+    return response.json()
+
+
+def request_processing_service(
+    path: str,
+    authority_token: str,
+    json_body: dict,
+):
+    try:
+        response = httpx.post(
+            url=f"{PROCESSING_SERVICE_URL}{path}",
+            headers={
+                "Authorization": f"Bearer {authority_token}",
+            },
+            json=json_body,
+            timeout=5.0,
+        )
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Processing Service unavailable",
+        ) from exc
+
+    if response.is_error:
+        detail = "Processing Service request failed"
 
         try:
             detail = response.json().get("detail", detail)
@@ -195,4 +237,22 @@ def get_document(
         method="GET",
         path=f"/documents/{document_id}",
         authority_token=authority_token,
+    )
+
+
+@app.post("/documents/{document_id}/analysis")
+def analyze_document(
+    document_id: int,
+    current_user=Depends(get_current_user),
+):
+    processing_token = create_processing_token(
+        document_id=document_id,
+    )
+
+    return request_processing_service(
+        path="/analysis",
+        authority_token=processing_token,
+        json_body={
+            "document_id": document_id,
+        },
     )

@@ -1,9 +1,13 @@
 import sqlite3
 from pathlib import Path
+import json
+import shutil
+from uuid import uuid4
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "resources.db"
+RESULTS_DIR = DATA_DIR / "results"
 
 
 def get_connection():
@@ -48,7 +52,7 @@ def initialize_database():
 
 def reset_database():
     if DB_PATH.exists():
-        DB_PATH.unlink()
+        shutil.rmtree(DATA_DIR)
 
     initialize_database()
 
@@ -141,5 +145,71 @@ def search_documents_for_owner(owner_id: str, query: str):
         documents = connection.execute(sql).fetchall()
 
         return [dict(document) for document in documents]
+    finally:
+        connection.close()
+
+
+def store_analysis_result(document_id: int, analysis: dict):
+    connection = get_connection()
+
+    try:
+        document = connection.execute(
+            """
+            SELECT owner_id
+            FROM documents
+            WHERE id = ?
+            """,
+            (document_id,),
+        ).fetchone()
+
+        if document is None:
+            return None
+
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+        filename = f"analysis_{document_id}_{uuid4().hex}.json"
+
+        result_path = RESULTS_DIR / filename
+
+        with result_path.open("w", encoding="utf-8") as result_file:
+            json.dump(
+                analysis,
+                result_file,
+                indent=2,
+            )
+
+        cursor = connection.execute(
+            """
+            INSERT INTO analysis_results (
+                document_id,
+                owner_id,
+                result_filename
+            )
+            VALUES (?, ?, ?)
+            """,
+            (
+                document_id,
+                document["owner_id"],
+                filename,
+            ),
+        )
+
+        connection.commit()
+
+        result = connection.execute(
+            """
+            SELECT
+                id,
+                document_id,
+                owner_id,
+                result_filename,
+                created_at
+            FROM analysis_results
+            WHERE id = ?
+            """,
+            (cursor.lastrowid,),
+        ).fetchone()
+
+        return dict(result)
     finally:
         connection.close()

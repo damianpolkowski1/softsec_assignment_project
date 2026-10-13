@@ -1,0 +1,7 @@
+pyproject.toml
+textstats_lib/__init__.py
+textstats_lib/stats.py
+textstats_lib.egg-info/PKG-INFO
+textstats_lib.egg-info/SOURCES.txt
+textstats_lib.egg-info/dependency_links.txt
+textstats_lib.egg-info/top_level.txt

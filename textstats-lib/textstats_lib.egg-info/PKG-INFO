@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: textstats-lib
+Version: 1.0.0
+Summary: Simple text statistics helper package
+Requires-Python: >=3.11

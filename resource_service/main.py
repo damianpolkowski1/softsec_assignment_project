@@ -2,10 +2,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel
+from typing import Any
 
 from resource_service.auth import get_authority, require_action
 from resource_service.database import (
     create_document as db_create_document,
+    store_analysis_result as db_store_analysis_result,
     get_document_by_id,
     initialize_database,
     list_documents_for_owner,
@@ -28,6 +30,11 @@ app = FastAPI(
 class DocumentCreate(BaseModel):
     title: str
     content: str
+
+
+class AnalysisStoreRequest(BaseModel):
+    document_id: int
+    analysis: dict[str, Any]
 
 
 @app.get("/")
@@ -106,3 +113,63 @@ def get_document(
 
     # Document's owner is intentionally not checked in this vulnerable version
     return document
+
+
+@app.get("/internal/documents/{document_id}")
+def get_document_for_processing(
+    document_id: int,
+    authority=Depends(get_authority),
+):
+    require_action(
+        authority,
+        "processing_read_document",
+    )
+
+    if authority.get("resource_id") != document_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token is not valid for this resource",
+        )
+
+    document = get_document_by_id(document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    return document
+
+
+@app.post(
+    "/internal/analysis-results",
+    status_code=status.HTTP_201_CREATED,
+)
+def store_analysis_result(
+    request: AnalysisStoreRequest,
+    authority=Depends(get_authority),
+):
+    require_action(
+        authority,
+        "store_analysis_result",
+    )
+
+    if authority.get("resource_id") != request.document_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token is not valid for this resource",
+        )
+
+    result = db_store_analysis_result(
+        document_id=request.document_id,
+        analysis=request.analysis,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    return result
