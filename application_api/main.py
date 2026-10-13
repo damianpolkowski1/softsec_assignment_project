@@ -256,3 +256,48 @@ def analyze_document(
             "document_id": document_id,
         },
     )
+
+
+@app.get("/analysis-results/{result_id}")
+def get_analysis_result(
+    result_id: int,
+    filename: str,
+    current_user=Depends(get_current_user),
+):
+    authority_token = create_resource_token(
+        username=current_user["username"],
+        action="read_analysis_result",
+        resource_id=result_id,
+    )
+
+    return request_resource_service(
+        method="GET",
+        path=f"/analysis-results/{result_id}",
+        authority_token=authority_token,
+        params={
+            "filename": filename,
+        },
+    )
+
+
+@app.get("/admin/documents/metadata")
+def get_all_document_metadata(
+    current_user=Depends(get_current_user),
+):
+    if current_user["role"] != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin role required",
+        )
+
+    authority_token = create_resource_token(
+        username=current_user["username"],
+        role=current_user["role"],
+        action="list_all_document_metadata",
+    )
+
+    return request_resource_service(
+        method="GET",
+        path="/admin/documents/metadata",
+        authority_token=authority_token,
+    )

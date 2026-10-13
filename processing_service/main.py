@@ -126,5 +126,6 @@ def analyze_document(
         "analysis_result_id": stored_result["id"],
         "document_id": document["id"],
         "document_owner": document["owner_id"],
+        "result_filename": stored_result["result_filename"],
         "analysis": analysis,
     }

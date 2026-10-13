@@ -213,3 +213,53 @@ def store_analysis_result(document_id: int, analysis: dict):
         return dict(result)
     finally:
         connection.close()
+
+
+def get_analysis_result_by_id(result_id: int):
+    connection = get_connection()
+
+    try:
+        result = connection.execute(
+            """
+            SELECT
+                id,
+                document_id,
+                owner_id,
+                result_filename,
+                created_at
+            FROM analysis_results
+            WHERE id = ?
+            """,
+            (result_id,),
+        ).fetchone()
+
+        if result is None:
+            return None
+
+        return dict(result)
+    finally:
+        connection.close()
+
+
+def read_result_file(filename: str):
+    result_path = RESULTS_DIR / filename
+
+    if not result_path.is_file():
+        return None
+
+    return result_path.read_text(encoding="utf-8")
+
+
+def list_all_document_metadata():
+    connection = get_connection()
+
+    try:
+        documents = connection.execute("""
+            SELECT id, owner_id, title, created_at
+            FROM documents
+            ORDER BY id
+            """).fetchall()
+
+        return [dict(document) for document in documents]
+    finally:
+        connection.close()

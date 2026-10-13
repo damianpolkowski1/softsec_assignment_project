@@ -4,7 +4,11 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel
 from typing import Any
 
-from resource_service.auth import get_authority, require_action
+from resource_service.auth import (
+    get_authority,
+    require_action,
+    require_role,
+)
 from resource_service.database import (
     create_document as db_create_document,
     store_analysis_result as db_store_analysis_result,
@@ -12,6 +16,9 @@ from resource_service.database import (
     initialize_database,
     list_documents_for_owner,
     search_documents_for_owner,
+    get_analysis_result_by_id,
+    list_all_document_metadata,
+    read_result_file,
 )
 
 
@@ -173,3 +180,67 @@ def store_analysis_result(
         )
 
     return result
+
+
+@app.get("/analysis-results/{result_id}")
+def get_analysis_result(
+    result_id: int,
+    filename: str,
+    authority=Depends(get_authority),
+):
+    require_action(
+        authority,
+        "read_analysis_result",
+    )
+
+    if authority.get("resource_id") != result_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token is not valid for this resource",
+        )
+
+    result = get_analysis_result_by_id(result_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Analysis result not found",
+        )
+
+    if result["owner_id"] != authority["sub"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this analysis result",
+        )
+
+    content = read_result_file(filename)
+
+    if content is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Result file not found",
+        )
+
+    return {
+        "result_id": result["id"],
+        "document_id": result["document_id"],
+        "filename": filename,
+        "content": content,
+    }
+
+
+@app.get("/admin/documents/metadata")
+def get_all_document_metadata(
+    authority=Depends(get_authority),
+):
+    require_action(
+        authority,
+        "list_all_document_metadata",
+    )
+
+    require_role(
+        authority,
+        "ADMIN",
+    )
+
+    return list_all_document_metadata()

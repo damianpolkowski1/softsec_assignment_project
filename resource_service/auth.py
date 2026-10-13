@@ -56,3 +56,11 @@ def require_action(authority: dict, expected_action: str):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Action not permitted",
         )
+
+
+def require_role(authority: dict, expected_role: str):
+    if authority.get("role") != expected_role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Required role not present",
+        )

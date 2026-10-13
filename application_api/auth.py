@@ -77,6 +77,7 @@ def create_resource_token(
     username: str,
     action: str,
     resource_id: int | None = None,
+    role: str | None = None,
 ):
     now = datetime.now(timezone.utc)
 
@@ -90,6 +91,9 @@ def create_resource_token(
 
     if resource_id is not None:
         payload["resource_id"] = resource_id
+
+    if role is not None:
+        payload["role"] = role
 
     return jwt.encode(
         payload,
