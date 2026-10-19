@@ -33,6 +33,12 @@ pipeline {
 
                     $python = Join-Path $env:WORKSPACE '.ci-venv/Scripts/python.exe'
 
+                    & $python -m pip install --upgrade "pip>=26.2.1"
+
+                    if ($LASTEXITCODE -ne 0) {
+                        throw "Failed to upgrade pip"
+                    }
+
                     & $python -m pip install -r requirements-dev.txt
                     if ($LASTEXITCODE -ne 0) {
                         throw "Dependency installation failed"
@@ -48,7 +54,7 @@ pipeline {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     powershell '''
-                        $ErrorActionPreference = "Stop"
+                        $ErrorActionPreference = "Continue"
 
                         $bandit = Join-Path $env:WORKSPACE '.ci-venv/Scripts/bandit.exe'
 
@@ -86,7 +92,7 @@ pipeline {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     powershell '''
-                        $ErrorActionPreference = "Stop"
+                        $ErrorActionPreference = "Continue"
 
                         $python = Join-Path $env:WORKSPACE '.ci-venv/Scripts/python.exe'
 
