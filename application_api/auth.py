@@ -102,11 +102,12 @@ def create_resource_token(
     )
 
 
-def create_processing_token(document_id: int):
+def create_processing_token(username: str, document_id: int):
     now = datetime.now(timezone.utc)
 
     payload = {
         "sub": "application-api",
+        "original_user": username,
         "aud": PROCESSING_AUDIENCE,
         "action": "analyze_document",
         "resource_id": document_id,

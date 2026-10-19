@@ -47,6 +47,14 @@ def get_processing_authority(
             detail="Invalid service identity",
         )
 
+    original_user = payload.get("original_user")
+
+    if not isinstance(original_user, str) or not original_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Original user identity missing",
+        )
+
     return payload
 
 

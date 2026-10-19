@@ -8,7 +8,6 @@ from processing_service.auth import (
     get_processing_authority,
     require_action,
 )
-from processing_service.resource_auth import create_resource_token
 from textstats_lib import analyze_text
 
 RESOURCE_SERVICE_URL = os.environ.get(
@@ -22,6 +21,8 @@ app = FastAPI(title="Processing Service")
 
 class AnalysisRequest(BaseModel):
     document_id: int
+    read_token: str
+    store_token: str
 
 
 def request_resource_service(
@@ -94,28 +95,24 @@ def analyze_document(
             detail="Token is not valid for this resource",
         )
 
-    read_token = create_resource_token(
-        action="processing_read_document",
-        document_id=request.document_id,
-    )
-
     document = request_resource_service(
         method="GET",
         path=f"/internal/documents/{request.document_id}",
-        authority_token=read_token,
+        authority_token=request.read_token,
     )
+
+    if document["owner_id"] != authority["original_user"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Document does not belong to the requesting user",
+        )
 
     analysis = analyze_text(document["content"])
-
-    store_token = create_resource_token(
-        action="store_analysis_result",
-        document_id=request.document_id,
-    )
 
     stored_result = request_resource_service(
         method="POST",
         path="/internal/analysis-results",
-        authority_token=store_token,
+        authority_token=request.store_token,
         json_body={
             "document_id": request.document_id,
             "analysis": analysis,

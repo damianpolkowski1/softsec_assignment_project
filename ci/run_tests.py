@@ -135,7 +135,6 @@ def main():
             "processing_service.main",
             18002,
             service_environment(
-                RESOURCE_JWT_SECRET=resource_secret,
                 PROCESSING_JWT_SECRET=processing_secret,
                 RESOURCE_SERVICE_URL=RESOURCE_URL,
             ),

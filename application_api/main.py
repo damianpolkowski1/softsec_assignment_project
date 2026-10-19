@@ -245,8 +245,23 @@ def analyze_document(
     document_id: int,
     current_user=Depends(get_current_user),
 ):
+    username = current_user["username"]
+
     processing_token = create_processing_token(
+        username=username,
         document_id=document_id,
+    )
+
+    read_token = create_resource_token(
+        username=username,
+        action="processing_read_document",
+        resource_id=document_id,
+    )
+
+    store_token = create_resource_token(
+        username=username,
+        action="store_analysis_result",
+        resource_id=document_id,
     )
 
     return request_processing_service(
@@ -254,6 +269,8 @@ def analyze_document(
         authority_token=processing_token,
         json_body={
             "document_id": document_id,
+            "read_token": read_token,
+            "store_token": store_token,
         },
     )
 

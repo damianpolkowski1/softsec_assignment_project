@@ -151,6 +151,12 @@ def get_document_for_processing(
             detail="Document not found",
         )
 
+    if document["owner_id"] != authority["sub"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to process this document",
+        )
+
     return document
 
 
@@ -171,6 +177,20 @@ def store_analysis_result(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Token is not valid for this resource",
+        )
+
+    document = get_document_by_id(request.document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    if document["owner_id"] != authority["sub"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to store analysis for this document",
         )
 
     result = db_store_analysis_result(
