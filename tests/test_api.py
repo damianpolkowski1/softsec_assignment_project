@@ -2,6 +2,7 @@ import os
 
 import httpx
 import pytest
+import json
 
 API_URL = os.environ.get(
     "APPLICATION_API_URL",
@@ -95,13 +96,14 @@ def test_normal_document_search(api, alice_headers):
 def test_generate_and_retrieve_analysis(api, alice_headers, alice_analysis):
     response = api.get(
         f"/analysis-results/{alice_analysis['analysis_result_id']}",
-        params={"filename": alice_analysis["result_filename"]},
         headers=alice_headers,
     )
 
     assert response.status_code == 200
     assert response.json()["document_id"] == 1
-    assert "word_count" in response.json()["content"]
+
+    stored_analysis = json.loads(response.json()["content"])
+    assert stored_analysis == alice_analysis["analysis"]
 
 
 def test_admin_metadata(api, alice_headers, admin_headers):
@@ -150,17 +152,23 @@ def test_cwe89_search_cannot_bypass_ownership(api, alice_headers):
 
 @pytest.mark.security
 def test_cwe22_cannot_read_outside_results(api, alice_headers, alice_analysis):
-    response = api.get(
-        f"/analysis-results/{alice_analysis['analysis_result_id']}",
+    result_path = f"/analysis-results/{alice_analysis['analysis_result_id']}"
+
+    normal_response = api.get(
+        result_path,
+        headers=alice_headers,
+    )
+
+    traversal_response = api.get(
+        result_path,
         params={"filename": "../../database.py"},
         headers=alice_headers,
     )
 
-    # The fixed version may reject the parameter or ignore it.
-    if response.status_code == 200:
-        assert "def get_connection" not in response.json()["content"]
-    else:
-        assert response.status_code in (400, 403, 404, 422)
+    assert normal_response.status_code == 200
+    assert traversal_response.status_code == 200
+
+    assert traversal_response.json() == normal_response.json()
 
 
 @pytest.mark.security

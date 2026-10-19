@@ -190,7 +190,6 @@ def store_analysis_result(
 @app.get("/analysis-results/{result_id}")
 def get_analysis_result(
     result_id: int,
-    filename: str,
     authority=Depends(get_authority),
 ):
     require_action(
@@ -218,7 +217,7 @@ def get_analysis_result(
             detail="Not authorized to access this analysis result",
         )
 
-    content = read_result_file(filename)
+    content = read_result_file(result["result_filename"])
 
     if content is None:
         raise HTTPException(
@@ -229,7 +228,6 @@ def get_analysis_result(
     return {
         "result_id": result["id"],
         "document_id": result["document_id"],
-        "filename": filename,
         "content": content,
     }
 

@@ -261,7 +261,6 @@ def analyze_document(
 @app.get("/analysis-results/{result_id}")
 def get_analysis_result(
     result_id: int,
-    filename: str,
     current_user=Depends(get_current_user),
 ):
     authority_token = create_resource_token(
@@ -274,9 +273,6 @@ def get_analysis_result(
         method="GET",
         path=f"/analysis-results/{result_id}",
         authority_token=authority_token,
-        params={
-            "filename": filename,
-        },
     )
 
 
