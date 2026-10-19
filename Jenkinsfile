@@ -83,6 +83,8 @@ pipeline {
                         if ($blocking.Count -gt 0) {
                             throw "Bandit release gate failed"
                         }
+
+                        exit 0
                     '''
                 }
             }
