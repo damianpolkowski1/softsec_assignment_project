@@ -118,7 +118,12 @@ def get_document(
             detail="Document not found",
         )
 
-    # Document's owner is intentionally not checked in this vulnerable version
+    if document["owner_id"] != authority["sub"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this document",
+        )
+
     return document
 
 
